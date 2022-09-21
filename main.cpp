@@ -3,6 +3,33 @@
 
 using namespace cv;
 
+cv::Point_<int> findBiggestBlob(Mat img) {
+    int max=-1;
+
+    Point maxPt;
+
+    for(int y=0;y<img.size().height;y++)
+    {
+        uchar *row = img.ptr(y);
+        for(int x=0;x<img.size().width;x++)
+        {
+            // in practice, this can be anything other than 1
+            if(row[x]>=128)
+            {
+
+                int area = floodFill(img, Point(x,y), CV_RGB(0,0,64));
+
+                if(area>max)
+                {
+                    maxPt = Point(x,y);
+                    max = area;
+                }
+            }
+        }
+    }
+
+    return maxPt;
+}
 
 int main(int argc, char** argv) {
     Mat sudoku = imread(SUDOKU_IMG_PATH, 0);
@@ -21,44 +48,18 @@ int main(int argc, char** argv) {
     Mat kernel = (Mat_<uchar>(3,3) << 0,1,0,1,1,1,0,1,0);
     dilate(outerBox, outerBox, kernel);
 
+    Point biggestBlob = findBiggestBlob(outerBox);
+    floodFill(outerBox, biggestBlob, CV_RGB(255, 255, 255));
 
-
-    // find the biggest blob
-    int count=0;
-    int max=-1;
-
-    Point maxPt;
-
+    // switch non-white pixels with black to hide them
     for(int y=0;y<outerBox.size().height;y++)
     {
         uchar *row = outerBox.ptr(y);
         for(int x=0;x<outerBox.size().width;x++)
         {
-            // in practice, this can be anything other than 1
-            if(row[x]>=128)
+            if(row[x]==64 && x!=biggestBlob.x && y!=biggestBlob.y)
             {
-
-                int area = floodFill(outerBox, Point(x,y), CV_RGB(0,0,64));
-
-                if(area>max)
-                {
-                    maxPt = Point(x,y);
-                    max = area;
-                }
-            }
-        }
-    }
-    floodFill(outerBox, maxPt, CV_RGB(255,255,255));
-
-    // fill the other non-write pixels with black to hide them
-    for(int y=0;y<outerBox.size().height;y++)
-    {
-        uchar *row = outerBox.ptr(y);
-        for(int x=0;x<outerBox.size().width;x++)
-        {
-            if(row[x]==64 && x!=maxPt.x && y!=maxPt.y)
-            {
-                int area = floodFill(outerBox, Point(x,y), CV_RGB(0,0,0));
+                floodFill(outerBox, Point(x,y), CV_RGB(0,0,0));
             }
         }
     }
@@ -75,3 +76,4 @@ int main(int argc, char** argv) {
 
     waitKey(0);
 }
+
